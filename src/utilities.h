@@ -13,7 +13,23 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-#define DIM_BUFF 512	/// Numero di byte massimo che può occupare una riga della matrice
+/// Numero di byte massimo che può occupare una riga della matrice
+#define DIM_BUFF 512
+
+/// Chiave della memoria condivisa della matrice A
+#define SHM_KEY_A 80
+
+/// Chiave della memoria condivisa della matrice B
+#define SHM_KEY_B 81
+
+/// Chiave della memoria condivisa della matrice C
+#define SHM_KEY_C 82
+
+/// Chiave della memoria condivisa della somma di C
+#define SHM_KEY_SOMMA 83
+
+/// Chiave del semaforo
+#define SEM_KEY 150
 
 /** @name Funzioni per la gestione delle matrici */
 /*@{ */
