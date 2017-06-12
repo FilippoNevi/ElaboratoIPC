@@ -9,11 +9,12 @@
   */
 
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-/// Numero di byte massimo che può occupare una riga della matrice
+/// Dimensione della variabile buffer
 #define DIM_BUFF 512
 
 /// Chiave della memoria condivisa della matrice A
@@ -30,6 +31,9 @@
 
 /// Chiave del semaforo
 #define SEM_KEY 150
+
+/// Chiave della coda di messaggi
+#define MSG_KEY 200
 
 /** @name Funzioni per la gestione delle matrici */
 /*@{ */
@@ -64,11 +68,9 @@ void leggiMatrice(int fileMatrice, int ** matrice, int ordine);
  *
  * @param buff Buffer su cui salvare la riga letta
  *
- * @param dimBuff Indica la dimensione massima del buffer
- *
  * @return Numero di byte letti
  */
-int leggiRiga(int fileMatrice, char * buff, int dimBuff);
+int leggiRiga(int fileMatrice, char * buff);
 
 /*@} */
 

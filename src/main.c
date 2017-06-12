@@ -31,6 +31,11 @@ int * matCondA, * matCondB, * matCondC, sommaCond;	// Dati condivisi dai process
 char * bufferOutput = (char *) malloc(256 * sizeof(char));
 int semaforo;										// Semaforo che gestisce la memoria condivisa
 struct sembuf op;									// Operazione da applicare al semaforo
+int pipeComandi[numFigli][2];						// Matrice di pipe per comunicare ai figli i comandi da svolgere
+int *pidFigli;										// Array di pid dei figli
+int codaMessaggi;
+int pid;
+
 
 	/**
 	  * @brief Apertura e creazione dei file di input e output
@@ -146,5 +151,50 @@ struct sembuf op;									// Operazione da applicare al semaforo
 	// Applico op a semaforo (1 = numero di operazioni da applicare)
 	semop(semaforo, &op, 1);
 
-	
+	processiFiglio = malloc(numFigli * sizeof(int));
+	if(processiFiglio == -1) {
+		strcpy(bufferOutput, "Errore: impossibile creare i processi figlio.");
+		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		return 0;
+	}
+
+	codaMessaggi = msgget(MSG_KEY, 0666 | IPC_CREAT | IPC_EXCL);
+	if(codaMessaggi == -1) {
+		strcpy(bufferOutput, "Errore: impossibile creare la coda dei messaggi.");
+		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		free(processiFiglio);
+		return 0;
+
+	/// Creazione figli
+	for(i = 0; i < numFigli; i++) {
+		/// Instauro la pipe
+		if(pipe(pipeComandi[i]) == -1) {
+			strcpy(bufferOutput, "Errore: impossibile creare la pipe.");
+			write(STDOUT, bufferOutput, sizeof(bufferOutput));
+			free(processiFiglio);
+			return 0;
+		}
+
+		/// Creo i figli
+		pid = fork();
+		if(pid == -1) {
+			strcpy(bufferOutput, "Errore: impossibile creare il processo figlio.");
+			write(STDOUT, bufferOutput, sizeof(bufferOutput));
+			free(processiFiglio);
+			return 0;
+		}
+		else if(pid == 0) {			// Codice processo figlio
+			if(close(pipeComandi[i][1]) == -1) {	// Chiudo la pipe di scrittura del figlio
+				strcpy(bufferOutput, "Errore: impossibile chiudere la pipe di scrittura del figlio.");
+				write(STDOUT, bufferOutput, sizeof(bufferOutput));
+				free(processiFiglio);
+				return 0;
+			}
+
+			eseguiComando(pipeComandi[i][0]);
+		}
+		else {							// Codice padre
+
+		}
+	}
 }

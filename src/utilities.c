@@ -21,7 +21,7 @@ char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 	buff = malloc(DIM_BUFF * sizeof(char));
 	temp = malloc(DIM_BUFF * sizeof(char));
 
-	while((n = leggiRiga(fileMatrice, buff, DIM_BUFF)) > 0) {
+	while((n = leggiRiga(fileMatrice, buff)) > 0) {
 
 		buff[n] = '\0';
 
@@ -48,6 +48,28 @@ char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 	}
 }
 
-int leggiRiga(int fileMatrice, char * buff, int dimBuff) {
+int leggiRiga(int fileMatrice, char * buff) {
+char carattere;			// Carattere su cui salvo ogni byte che leggo dal file
+int dim, dimTot = 0;
 	
+	if((dim = read(fileMatrice, &carattere, 1)) > 0) {	// Leggo un byte alla volta
+		if((carattere == EOF) || (carattere == '\n')){
+			return 0;
+		}
+		else {
+			dimTot++;
+			
+			while((carattere != '\n') && (carattere != EOF) && (dim > 0)) {
+				*buff = carattere;
+				buff++;
+				dim = read(fileMatrice, &carattere, 1);
+				dimTot++;
+			}
+
+			return dimTot;
+		}
+	}
+	else {
+		return 0;
+	}
 }
