@@ -13,11 +13,11 @@
 
 #include <stdlib.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include "utilities.h"
 
 #define NUM_PARAMETRI 5+1	// Argomenti (5) + nome eseguibile (1)
-#define STDOUT 1
 
 int main(int argc, char *argv[]) {
 
@@ -27,8 +27,7 @@ int fileA, fileB, fileC;							// Descriptor dei file delle matrici
 int chiusuraFlag = 0;								// Flag per tener traccia di errori riscontrati
 int memA, memB, memC, memSomma;						// Riferimenti alle aree di memoria condivise
 int i, j;
-int * matCondA, * matCondB, * matCondC, sommaCond;	// Dati condivisi dai processi
-char * bufferOutput = (char *) malloc(256 * sizeof(char));
+int * matCondA, * matCondB, * matCondC, *sommaCond;	// Dati condivisi dai processi
 int semaforo;										// Semaforo che gestisce la memoria condivisa
 struct sembuf op;									// Operazione da applicare al semaforo
 int pipeComandi[numFigli][2];						// Matrice di pipe per comunicare ai figli i comandi da svolgere
@@ -37,42 +36,33 @@ int codaMessaggi;
 int pid;
 
 
-	/**
-	  * @brief Apertura e creazione dei file di input e output
-	*/
 	if(argc != NUM_PARAMETRI) {
-		strcpy(bufferOutput, "Errore: i parametri devono essere matriceA matriceB matriceC ordine processiFiglio.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: i parametri devono essere matriceA matriceB matriceC ordine processiFiglio.");
 		chiusuraFlag = 1;
 	}
 
 	if((fileMatA = open(argv[1], O_RDONLY, S_IRUSR)) < 0) {	// Apertura file della matrice A
-		strcpy(bufferOutput, "Errore: impossibile aprire il file della matrice A.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile aprire il file della matrice A.");
 		chiusuraFlag = 1;
 	}
 
 	if((fileMatB = open(argv[2], O_RDONLY, S_IRUSR)) < 0) {	// Apertura file della matrice B
-		strcpy(bufferOutput, "Errore: impossibile aprire il file della matrice B.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile aprire il file della matrice B.");
 		chiusuraFlag = 1;
 	}
 
 	if((fileMatC = creat(argv[3], O_RDWR | O_TRUNC | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0) {
-		strcpy(bufferOutput, "Errore: impossibile creare il file della matrice C.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile creare il file della matrice C.");
 		chiusuraFlag = 1;
 	}
 
 	if((ordine = atoi(argv[4])) <= 0) {
-		strcpy(bufferOutput, "Errore: l'ordine delle matrici deve essere maggiore di zero.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: l'ordine delle matrici deve essere maggiore di zero.");
 		chiusuraFlag = 1;
 	}
 
 	if((numFigli = atoi(argv[5])) <= 0) {
-		strcpy(bufferOutput, "Errore: il numero dei processi figli deve essere maggiore di zero.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: il numero dei processi figli deve essere maggiore di zero.");
 		chiusuraFlag = 1;
 	}
 
@@ -80,7 +70,6 @@ int pid;
 		close(fileMatA);
 		close(fileMatB);
 		close(fileMatC);
-		free(bufferOutput);
 
 		return 0;
 	}
@@ -91,8 +80,8 @@ int pid;
 
 	matProcessi = crea_matrice(ordine);
 
-	leggiMatrice(fileMatA, matA, ordine);
-	leggiMatrice(fileMatB, matB, ordine);
+	leggiMatrice(fileMatA, matA);
+	leggiMatrice(fileMatB, matB);
 
 	/// Creazione delle quattro aree di memoria condivisa
 	memA = shmget(SHM_KEY_A, sizeof(int[ordine][ordine]), (0666 | IPC_CREAT));	// IPC_CREAT crea una nuova entry se key non esiste
@@ -101,36 +90,31 @@ int pid;
 	memSomma = shmget(SHM_KEY_SOMMA, sizeof(int), (0666 | IPC_CREAT));
 
 	if((memA == -1) || (memB == -1) || (memC == -1) || (memSomma == -1)) {
-		strcpy(bufferOutput, "Errore: creazione della memoria condivisa non riuscita.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: creazione della memoria condivisa non riuscita.");
 		return 0;
 	}
 
 	matCondA = shmat(memA, NULL, 0);
 	if(matCondA == (void *)-1) {
-		strcpy(bufferOutput, "Errore: impossibile effettuare attach della matrice A.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile effettuare attach della matrice A.");
 		return 0;
 	}
 
 	matCondB = shmat(memB, NULL, 0);
 	if(matCondB == (void *)-1) {
-		strcpy(bufferOutput, "Errore: impossibile effettuare attach della matrice B.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile effettuare attach della matrice B.");
 		return 0;
 	}
 
 	matCondC = shmat(memC, NULL, 0);
 	if(matCondC == (void *)-1) {
-		strcpy(bufferOutput, "Errore: impossibile effettuare attach della matrice C.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile effettuare attach della matrice C.");
 		return 0;
 	}
 
 	sommaCond = shmat(memSomma, NULL, 0);
 	if(sommaCond == (void *)-1) {
-		strcpy(bufferOutput, "Errore: impossibile effettuare attach della somma di C.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile effettuare attach della somma di C.");
 		return 0;
 	}
 
@@ -138,8 +122,7 @@ int pid;
 
 	semaforo = semget(SEM_KEY, 1, 0666 | IPC_CREAT | IPC_EXCL);
 	if(semaforo < 0) {
-		strcpy(bufferOutput, "Errore: impossibile creare il semaforo.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+		segnala("Errore: impossibile creare il semaforo.");
 		return 0;
 	}
 
@@ -151,50 +134,52 @@ int pid;
 	// Applico op a semaforo (1 = numero di operazioni da applicare)
 	semop(semaforo, &op, 1);
 
-	processiFiglio = malloc(numFigli * sizeof(int));
-	if(processiFiglio == -1) {
-		strcpy(bufferOutput, "Errore: impossibile creare i processi figlio.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
+	pidFigli = malloc(numFigli * sizeof(int));
+	if(pidFigli == -1) {
+		segnala("Errore: impossibile creare i processi figlio.");
 		return 0;
 	}
 
 	codaMessaggi = msgget(MSG_KEY, 0666 | IPC_CREAT | IPC_EXCL);
 	if(codaMessaggi == -1) {
-		strcpy(bufferOutput, "Errore: impossibile creare la coda dei messaggi.");
-		write(STDOUT, bufferOutput, sizeof(bufferOutput));
-		free(processiFiglio);
+		segnala("Errore: impossibile creare la coda dei messaggi.");
+		free(pidFigli);
 		return 0;
 
 	/// Creazione figli
 	for(i = 0; i < numFigli; i++) {
 		/// Instauro la pipe
 		if(pipe(pipeComandi[i]) == -1) {
-			strcpy(bufferOutput, "Errore: impossibile creare la pipe.");
-			write(STDOUT, bufferOutput, sizeof(bufferOutput));
-			free(processiFiglio);
+			segnala("Errore: impossibile creare la pipe.");
+			free(pidFigli);
+			free matA
+			free matB
+			free matC
+			free somma
 			return 0;
 		}
 
 		/// Creo i figli
 		pid = fork();
 		if(pid == -1) {
-			strcpy(bufferOutput, "Errore: impossibile creare il processo figlio.");
-			write(STDOUT, bufferOutput, sizeof(bufferOutput));
-			free(processiFiglio);
+			segnala("Errore: impossibile creare il processo figlio.");
+			free(pidFigli);
 			return 0;
 		}
 		else if(pid == 0) {			// Codice processo figlio
 			if(close(pipeComandi[i][1]) == -1) {	// Chiudo la pipe di scrittura del figlio
-				strcpy(bufferOutput, "Errore: impossibile chiudere la pipe di scrittura del figlio.");
-				write(STDOUT, bufferOutput, sizeof(bufferOutput));
-				free(processiFiglio);
+				segnala("Errore: impossibile chiudere la pipe di scrittura del figlio.");
+				free(pidFigli);
 				return 0;
 			}
 
-			eseguiComando(pipeComandi[i][0]);
+			leggiComando(pipeComandi[i][0]);
 		}
 		else {							// Codice padre
-
+			pidFigli[i] = pid;
+			close(pipeComandi[i][0]);
 		}
 	}
+
+
 }

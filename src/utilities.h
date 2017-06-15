@@ -10,9 +10,13 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #ifndef UTILITIES_H
 #define UTILITIES_H
+
+/// Costante dello standard output, per la stampa a schermo
+#define STDOUT 1
 
 /// Dimensione della variabile buffer
 #define DIM_BUFF 512
@@ -48,7 +52,6 @@
   */
 int ** creaMatrice(int ordine);
 
-
 /**
  * @brief Funzione che legge da un file una matrice e la salva
  *
@@ -56,10 +59,8 @@ int ** creaMatrice(int ordine);
  *
  * @param matrice Puntatore alla matrice su cui salvare i dati
  *
- * @param ordine Ordine della matrice
- *
  */
-void leggiMatrice(int fileMatrice, int ** matrice, int ordine);
+void leggiMatrice(int fileMatrice, int ** matrice);
 
 /**
  * @brief Funzione che legge riga per riga un file
@@ -69,9 +70,31 @@ void leggiMatrice(int fileMatrice, int ** matrice, int ordine);
  * @param buff Buffer su cui salvare la riga letta
  *
  * @return Numero di byte letti
+ *
  */
 int leggiRiga(int fileMatrice, char * buff);
 
+/**
+  * @brief Funzione che carica nell'area di memoria condivisa la matrice
+  *
+  * @param matrice Puntatore alla variabile matrice da caricare
+  *
+  * @param matriceCond Puntatore all'area di memoria condivisa
+  *
+  * @param ordine Ordine della matrice da caricare
+  *
+  */
+void caricaMatrice(int ** matrice, int * matriceCond, int ordine);
+
 /*@} */
+
+
+/**
+  * @brief Funzione che stampa a schermo una stringa
+  *
+  * @param bufferOutput Stringa su cui viene salvato il testo
+  *
+  */
+void segnala(char * bufferOutput);
 
 #endif

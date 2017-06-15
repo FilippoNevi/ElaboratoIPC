@@ -11,15 +11,20 @@ int ** creaMatrice(int ordine) {
 	return matrice;
 }
 
-void leggiMatrice(int fileMatrice, int ** matrice, int ordine) {
+void leggiMatrice(int fileMatrice, int ** matrice) {
 
 char * buff;		// Buffer su cui salvare il contenuto di ogni riga
 int n;				// Numero di byte letti dalla funzione read
 int i = 0, j = 0, k, x = 0;
 char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 
-	buff = malloc(DIM_BUFF * sizeof(char));
-	temp = malloc(DIM_BUFF * sizeof(char));
+	if((buff = malloc(DIM_BUFF * sizeof(char))) == -1) {
+		segnala("Errore: impossibile allocare buffer durante la lettura di una matrice.");
+		exit(1);
+	}
+	if((temp = malloc(DIM_BUFF * sizeof(char))) == -1) {
+		segnala("Errore: impossibile allocare stringa temporanea durante la lettura di una matrice.");
+	}
 
 	while((n = leggiRiga(fileMatrice, buff)) > 0) {
 
@@ -72,4 +77,17 @@ int dim, dimTot = 0;
 	else {
 		return 0;
 	}
+}
+
+void segnala(char * bufferOutput) {
+	write(STDOUT, bufferOutput, sizeof(bufferOutput));
+}
+
+void caricaMatrice(int ** matrice, int * matriceCond, int ordine) {
+int i, j;
+
+	for(i = 0; i < ordine; i++)
+		for(j = 0; j < ordine; j++)
+			matriceCond[(i * ordine) + j] = matrice[i][j];
+
 }
