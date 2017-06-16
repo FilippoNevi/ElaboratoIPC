@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "utilities.h"
+#include "child.h"
 
 #define NUM_PARAMETRI 5+1	// Argomenti (5) + nome eseguibile (1)
 
@@ -34,6 +35,8 @@ int pipeComandi[numFigli][2];						// Matrice di pipe per comunicare ai figli i 
 int *pidFigli;										// Array di pid dei figli
 int codaMessaggi;
 int pid;
+char * buffComando;
+messaggio msgFiglio;
 
 
 	if(argc != NUM_PARAMETRI) {
@@ -135,7 +138,7 @@ int pid;
 	semop(semaforo, &op, 1);
 
 	pidFigli = malloc(numFigli * sizeof(int));
-	if(pidFigli == -1) {
+	if(pidFigli == NULL) {
 		segnala("Errore: impossibile creare i processi figlio.");
 		return 0;
 	}
@@ -166,14 +169,22 @@ int pid;
 			free(pidFigli);
 			return 0;
 		}
-		else if(pid == 0) {			// Codice processo figlio
+		else if(pid == 0) {				// Codice processo figlio
 			if(close(pipeComandi[i][1]) == -1) {	// Chiudo la pipe di scrittura del figlio
-				segnala("Errore: impossibile chiudere la pipe di scrittura del figlio.");
+				segnala("Errore: impossibile chiudere la pipe di scrittura nel child.");
 				free(pidFigli);
-				return 0;
+				exit(1);
 			}
 
 			leggiComando(pipeComandi[i][0]);
+
+			if(close(pipeComandi[i][0]) == -1) {	// Chiudo la pipe di scrittura del figlio
+				segnala("Errore: impossibile chiudere la pipe di lettura nel child.");
+				free(pidFigli);
+				exit(1);
+			}
+
+			exit(0);
 		}
 		else {							// Codice padre
 			pidFigli[i] = pid;
@@ -181,5 +192,35 @@ int pid;
 		}
 	}
 
+	if((buffComando = malloc(sizeof(char) * DIM_COM)) == NULL) {
+		segnala("Errore: impossibile allocare il buffer del comando.");
+	}
+
+	if(ordine == 1) {
+		// Creo il comando e lo invio al figlio
+		creaComando(buffComando, MOLTIPLICA, 0, 0, ordine);
+		write(pipeComandi[0][1], buffComando, strlen(buffComando));
+
+		// Mi metto in ascolto della risposta del figlio
+		msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
+		// Segno che l'unica cella da elaborare è stata completata
+		matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
+	}
+	else if((ordine * ordine) <= numFigli) {
+		for(i = 0; i < ordine; i++)
+			for(j = 0; j < ordine; j++) {
+				creaComando(buff, MOLTIPLICA, i, j, ordine);
+				write(pipeComandi[(i * ordine) + j][1], buffComando, strlen(buffComando));
+			}
+
+		for(i = 0; i < numFigli; i++) {
+			// Mi metto in ascolto della risposta di un figlio
+			msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
+			// Segno che la cella assegnata è stata completata
+			matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
+		}
+	}
 
 }

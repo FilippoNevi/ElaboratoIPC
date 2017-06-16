@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "child.h"
+
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
@@ -96,5 +98,26 @@ void caricaMatrice(int ** matrice, int * matriceCond, int ordine);
   *
   */
 void segnala(char * bufferOutput);
+
+
+/**
+  * @brief Funzione che crea la stringa da inviare tramite pipe
+  * ad ogni processo figlio
+  *
+  * @param buff Puntatore al buffer su cui salvare il comando generato
+  *
+  * @param comando Operazione che deve eseguire il figlio
+  *
+  * @param riga Riga della matrice A (in caso di moltiplicazione)
+  * o C (in caso di somma)
+  *
+  * @param colonna Colonna della matrice B (in caso di moltiplicazione)
+  * 
+  * @param ordine Ordine delle matrici
+  *
+  * @return Puntatore alla stringa contenente il comando
+  *
+  */
+char* creaComando(char * buff, int comando, int riga, int colonna, int ordine);
 
 #endif

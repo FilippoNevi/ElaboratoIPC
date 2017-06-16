@@ -91,3 +91,17 @@ int i, j;
 			matriceCond[(i * ordine) + j] = matrice[i][j];
 
 }
+
+void creaComando(char * buff, int comando, int riga, int colonna, int ordine) {
+
+	if(comando == MOLTIPLICA) {
+		sprintf(buff, "%d %d %d %d", comando, riga, colonna, ordine);
+	}
+	else if(comando == SOMMA) {
+		sprintf(buff, "%d %d %d", comando, riga, ordine);
+	}
+	else if(comando == ESCI) {
+		sprintf(buff, "%d", comando);
+	}
+
+}

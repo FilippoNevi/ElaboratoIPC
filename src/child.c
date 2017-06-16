@@ -5,51 +5,64 @@ char buff[DIM_COM];				// Buffer su cui salvo il comando di cui fare parsing
 int comando, riga, colonna, ordine;		// Parametri del comando inviato dal padre
 int i, j;
 char temp[3+1];					// Stringa temporanea su cui salvo i numeri da trasformare in int
+int esci = 0;
 
-	if(read(pipe, &buff, DIM_COM) > 0) {
-		// Parsing del comando
-		if(buff[0] == MOLTIPLICA) {				// Devo moltiplicare
-			comando = MOLTIPLICA;
-			for(i = 2, j = 0; buff[i] != ' '; i++, j++)
-				temp[j] = buff[i];
-			temp[j] = '\0';
-			riga = atoi(temp);
+	while(!esci) {
 
-			i++;			// Sposto i alla cella dove inizia il numero della colonna
-			for(j = 0; buff[i] != ' '; i++, j++)
-				temp[j] = buff[i];
-			temp[j] = '\0';
-			colonna = atoi(temp);
+		if(read(pipe, &buff, DIM_COM) > 0) {
+			// Parsing del comando
+			if(buff[0] == MOLTIPLICA) {				// Devo moltiplicare
 
-			i++;
-			for(j = 0; i < DIM_COM && buff[i] != '\0'; i++, j++)
-				temp[j] = buff[i];
-			temp[j] = '\0';
-			ordine = atoi(temp);
+				comando = MOLTIPLICA;
+				for(i = 2, j = 0; buff[i] != ' '; i++, j++)
+					temp[j] = buff[i];
+				temp[j] = '\0';
+				riga = atoi(temp);
+
+				i++;			// Sposto i alla cella dove inizia il numero della colonna
+				for(j = 0; buff[i] != ' '; i++, j++)
+					temp[j] = buff[i];
+				temp[j] = '\0';
+				colonna = atoi(temp);
+
+				i++;
+				for(j = 0; i < DIM_COM && buff[i] != '\0'; i++, j++)
+					temp[j] = buff[i];
+				temp[j] = '\0';
+				ordine = atoi(temp);
+
+				eseguiComando(comando, riga, colonna, ordine);
+			}
+
+			else if(buff[0] == SOMMA) {				// Devo sommare
+
+				comando = SOMMA;
+				for(i = 2, j = 0; buff[i] != ' '; i++, j++)
+					temp[j] = buff[i];
+				temp[j] = '\0';
+				riga = atoi(temp);
+
+				i++;
+				for(j = 0; i < DIM_COM && buff[i] != '\0'; i++, j++)
+					temp[j] = buff[i];
+				temp[j] = '\0';
+				ordine = atoi(temp);
+
+				colonna = -1;
+
+				eseguiComando(comando, riga, colonna, ordine);
+			}
+
+			else if(buff[0] == ESCI)				// Devo uscire
+				esci = 1;
+
 		}
 
-		else if(buff[0] == SOMMA) {				// Devo sommare
-			comando = SOMMA;
-			for(i = 2, j = 0; buff[i] != ' '; i++, j++)
-				temp[j] = buff[i];
-			temp[j] = '\0';
-			riga = atoi(temp);
-
-			i++;
-			for(j = 0; i < DIM_COM && buff[i] != '\0'; i++, j++)
-				temp[j] = buff[i];
-			temp[j] = '\0';
-			ordine = atoi(temp);
-
-			colonna = -1;
-		}
-
-		eseguiComando(comando, riga, colonna, ordine);
 	}
 }
 
 void eseguiComando(int comando, int riga, int colonna, int ordine) {
-int semaforo;
+int semaforo, codaMessaggi;
 struct sembuf op;
 int memA, memB, memC, memSomma;
 int * matCondA, * matCondB, * matCondC, * sommaCond;
@@ -57,6 +70,10 @@ int * tempA, * tempB, risultato;
 	
 	if((semaforo = semget(SEM_KEY, 1, 0666)) == -1) {
 		segnala("Errore: impossibile creare il semaforo nel child.")
+	}
+
+	if((codaMessaggi = msgget(MSG_KEY, 0666)) == -1) {
+		segnala("Errore: impossibile creare la coda di messaggi nel child.");
 	}
 
 
@@ -108,46 +125,85 @@ int * tempA, * tempB, risultato;
 			exit(1);
 		}
 
-		// Ricavo la riga di A da moltiplicare:
+		// Ricavo la riga di A da moltiplicare
 		j = 0;
 		for(i = ordine * riga; i < ordine * (riga+1); i++, j++) {
-			*tempA[j] = *matCondA[i];
+			tempA[j] = matCondA[i];
 		}
 
-		// Ricavo la colonna di B da moltiplicare:
+		// Ricavo la colonna di B da moltiplicare
 		j = 0;
 		for(i = 0; i < ordine; i++, j++) {
-			*tempB[j] = *matCondB[(i * ordine) + colonna];
+			tempB[j] = matCondB[(i * ordine) + colonna];
 		}
 
 		// Calcolo il risultato della moltiplicazione
 		risultato = 0;
 		for(i = 0; i < ordine; i++)
-			risultato += ((*tempA[i]) * (*tempB[i]));
+			risultato += ((tempA[i]) * (tempB[i]));
 
 		// Scrivo il risultato sulla matrice C condivisa
-		*matCondC[riga][colonna] = risultato;
+		matCondC[(riga * ordine) + colonna] = risultato;
 
 		// Notifico al padre che ho finito l'operazione richiesta
-		
+		messaggio msg;
+
+		msg.mtype = 1;
+		msg.comando = comando;
+		msg.riga = riga;
+		msg.colonna = colonna;
+		msg.pid = getpid();
+
+		msgsnd(codaMessaggi, &msg, sizeof(msg) - sizeof(long), 1);
+
+		free(tempA);
+		free(tempB);
 	}
 
 	if(comando == SOMMA) {
-		// operazioni di somma 
+	int i;
 
+		risultato = 0;
 
+		// Calcolo la somma della riga di C
+		for(i = 0; i < ordine; i++)
+			risultato += matCondC[(riga * ordine) + i];
+
+		// Richiedo il semaforo
 		op.sem_num = 0;
 		op.sem_op = -1;
 		op.sem_flg = 0;
-		// e richiedo semaforo
+		semop(semaforo, &op, 1);
 
+		// Incremento la variabile condivisa
+		*sommaCond += risultato;
 
-		// scrittura in memoria
-
-
-
-
+		// Rilascio il semaforo
 		op.sem_op = 1;
-		// sblocco semaforo
+		semop(semaforo, &op, 1);
+
+		// Notifico al padre che ho finito l'operazione richiesta
+		messaggio msg;
+
+		msg.mtype = 1;
+		msg.comando = comando;
+		msg.riga = riga;
+		msg.colonna = colonna;
+		msg.pid = getpid();
+
+		msgsnd(codaMessaggi, &msg, sizeof(msg) - sizeof(long), 1);
 	}
+
+	if((shmdt(matCondA)) < 0)
+		segnala("Errore: impossibile effettuare detach della matrice A nel child.");
+
+	if((shmdt(matCondB)) < 0)
+		segnala("Errore: impossibile effettuare detach della matrice B nel child.");
+
+	if((shmdt(matCondC)) < 0)
+		segnala("Errore: impossibile effettuare detach della matrice C nel child.");
+
+	if((shmdt(sommaCond)) < 0)
+		segnala("Errore: impossibile effettuare detach della somma condivisa nel child.");
+
 }
