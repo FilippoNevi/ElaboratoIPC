@@ -19,11 +19,11 @@ int i = 0, j = 0, k, x = 0;
 char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 
 	if((buff = malloc(DIM_BUFF * sizeof(char))) == -1) {
-		segnala("Errore: impossibile allocare buffer durante la lettura di una matrice.");
+		segnala("Errore: impossibile allocare buffer durante la lettura di una matrice.\n\n");
 		exit(1);
 	}
 	if((temp = malloc(DIM_BUFF * sizeof(char))) == -1) {
-		segnala("Errore: impossibile allocare stringa temporanea durante la lettura di una matrice.");
+		segnala("Errore: impossibile allocare stringa temporanea durante la lettura di una matrice.\n\n");
 	}
 
 	while((n = leggiRiga(fileMatrice, buff)) > 0) {
@@ -51,6 +51,9 @@ char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 			}
 		}
 	}
+
+	free(buff);
+	free(temp);
 }
 
 int leggiRiga(int fileMatrice, char * buff) {
@@ -104,4 +107,14 @@ void creaComando(char * buff, int comando, int riga, int colonna, int ordine) {
 		sprintf(buff, "%d", comando);
 	}
 
+}
+
+void freeMatrice(int ** matrice, int ordine) {
+int i;
+
+	for(i = 0; i < ordine; i++) {
+		free(matrice[i]);
+	}
+
+	free(matrice);
 }

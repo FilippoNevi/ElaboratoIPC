@@ -88,6 +88,17 @@ int leggiRiga(int fileMatrice, char * buff);
   */
 void caricaMatrice(int ** matrice, int * matriceCond, int ordine);
 
+
+/**
+  * @brief Funzione che effettua la free di una matrice
+  *
+  * @param matrice Puntatore alla variabile matrice
+  *
+  * @param ordine Ordine della matrice
+  *
+  */
+void freeMatrice(int ** matrice, int ordine);
+
 /*@} */
 
 
