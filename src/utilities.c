@@ -59,7 +59,7 @@ int dim, dimTot = 0;
 	
 	if((dim = read(fileMatrice, &carattere, 1)) > 0) {	// Leggo un byte alla volta
 		if((carattere == EOF) || (carattere == '\n')){
-			return 0;
+			return dimTot;
 		}
 		else {
 			dimTot++;
@@ -75,12 +75,12 @@ int dim, dimTot = 0;
 		}
 	}
 	else {
-		return 0;
+		return dimTot;
 	}
 }
 
 void segnala(char * bufferOutput) {
-	write(STDOUT, bufferOutput, sizeof(bufferOutput));
+	write(STDOUT, bufferOutput, strlen(bufferOutput));
 }
 
 void caricaMatrice(int ** matrice, int * matriceCond, int ordine) {
