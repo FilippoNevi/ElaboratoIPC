@@ -6,6 +6,10 @@ int comando, riga, colonna, ordine;		// Parametri del comando inviato dal padre
 int i, j;
 char temp[3+1];					// Stringa temporanea su cui salvo i numeri da trasformare in int
 int esci = 0;
+char * buffOutput;
+
+	if((buffOutput = malloc(DIM_BUFF * sizeof(char))) == NULL)
+		segnala("Errore: impossibile allocare buffOutput in child.");
 
 	while(!esci) {
 
@@ -31,7 +35,8 @@ int esci = 0;
 				temp[j] = '\0';
 				ordine = atoi(temp);
 
-				segnala("Child: ho ricevuto il comando di moltiplicare la riga %d di A e la colonna %d di B.\n\n", riga, colonna);
+				sprintf(buffOutput, "Child: ho ricevuto il comando di moltiplicare la riga %d di A e la colonna %d di B.\n\n", riga, colonna);
+				segnala(buffOutput);
 				eseguiComando(comando, riga, colonna, ordine);
 			}
 
@@ -51,7 +56,8 @@ int esci = 0;
 
 				colonna = -1;
 
-				segnala("Child: ho ricevuto il comando di sommare la riga %d di C.\n\n", riga);
+				sprintf(buffOutput, "Child: ho ricevuto il comando di sommare la riga %d di C.\n\n", riga);
+				segnala(buffOutput);
 				eseguiComando(comando, riga, colonna, ordine);
 			}
 
@@ -72,47 +78,37 @@ int memA, memB, memC, memSomma;
 int * matCondA, * matCondB, * matCondC, * sommaCond;
 int * tempA, * tempB, risultato;
 	
-	if((semaforo = semget(SEM_KEY, 1, 0666)) == -1) {
-		segnala("Errore: impossibile creare il semaforo nel child.\n\n")
-	}
+	if((semaforo = semget(SEM_KEY, 1, 0666)) == -1)
+		segnala("Errore: impossibile creare il semaforo nel child.\n\n");
 
-	if((codaMessaggi = msgget(MSG_KEY, 0666)) == -1) {
+	if((codaMessaggi = msgget(MSG_KEY, 0666)) == -1)
 		segnala("Errore: impossibile creare la coda di messaggi nel child.\n\n");
-	}
 
 
-	if((memA = shmget(SHM_KEY_A, sizeof(int[ordine][ordine]), 0666)) == -1) {
+	if((memA = shmget(SHM_KEY_A, sizeof(int[ordine][ordine]), 0666)) == -1)
 		segnala("Errore: impossibile ricevere riferimento all'area di memoria condivisa della matrice A nel child.\n\n");
-	}
 
-	if((memB = shmget(SHM_KEY_B, sizeof(int[ordine][ordine]), 0666)) == -1) {
+	if((memB = shmget(SHM_KEY_B, sizeof(int[ordine][ordine]), 0666)) == -1)
 		segnala("Errore: impossibile ricevere riferimento all'area di memoria condivisa della matrice B nel child.\n\n");
-	}
 
-	if((memC = shmget(SMH_KEY_C, sizeof(int[ordine][ordine]), 0666)) == -1) {
+	if((memC = shmget(SHM_KEY_C, sizeof(int[ordine][ordine]), 0666)) == -1)
 		segnala("Errore: impossibile ricevere riferimento all'area di memoria condivisa della matrice C nel child.\n\n");
-	}
 
-	if((memSomma = shmget(SHM_KEY_SOMMA, sizeof(int), 0666)) == -1) {
+	if((memSomma = shmget(SHM_KEY_SOMMA, sizeof(int), 0666)) == -1)
 		segnala("Errore: impossibile riceve riferimento all'area di memoria condivisa della variabile somma nel child.\n\n");
-	}
 
 
-	if((matCondA = shmat(memA, NULL, 0)) == (void *)-1) {
+	if((matCondA = shmat(memA, NULL, 0)) == (void *)-1)
 		segnala("Errore: impossibile effettuare l'attach della matrice A nel child.\n\n");
-	}
 
-	if((matCondB = shmat(memB, NULL, 0)) == (void *)-1) {
+	if((matCondB = shmat(memB, NULL, 0)) == (void *)-1)
 		segnala("Errore: impossibile effettuare l'attach della matrice B nel child.\n\n");
-	}
 
-	if((matCondC = shmat(memC, NULL, 0)) == (void *)-1) {
+	if((matCondC = shmat(memC, NULL, 0)) == (void *)-1)
 		segnala("Errore: impossibile effettuare l'attach della matrice C nel child.\n\n");
-	}
 
-	if((sommaCond = shmat(memSomma, NULL, 0)) == (void *)-1) {
+	if((sommaCond = shmat(memSomma, NULL, 0)) == (void *)-1)
 		segnala("Errore: impossibile effettuare l'attach della somma di C nel child.\n\n");
-	}
 
 
 	if(comando == MOLTIPLICA) {	
@@ -120,11 +116,11 @@ int * tempA, * tempB, risultato;
 	int i, j;
 
 		// Salvo la riga e la colonna da moltiplicare in due array
-		if((tempA = malloc(ordine * sizeof(int))) == -1) {
+		if((tempA = malloc(ordine * sizeof(int))) == NULL) {
 			segnala("Errore: impossibile allocare vettore temporaneo durante l'esecuzione di un child.\n\n");
 			exit(1);
 		}
-		if((tempB = malloc(ordine * sizeof(int))) == -1) {
+		if((tempB = malloc(ordine * sizeof(int))) == NULL) {
 			segnala("Errore: impossibile allocare vettore temporaneo durante l'esecuzione di un child.\n\n");
 			exit(1);
 		}
@@ -209,5 +205,7 @@ int * tempA, * tempB, risultato;
 
 	if((shmdt(sommaCond)) < 0)
 		segnala("Errore: impossibile effettuare detach della somma condivisa nel child.\n\n");
+
+	segnala("Child: ho finito l'operazione assegnata.\n\n");
 
 }

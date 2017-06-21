@@ -12,23 +12,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/msg.h>
 
 #include  "utilities.h"
 
 #ifndef CHILD_H
 #define CHILD_H
-
-/// Moltiplicazione di una riga di A con una colonna di B
-#define MOLTIPLICA 0
-
-/// Somma di una riga di C
-#define SOMMA 1
-
-/// Chiusura del child
-#define ESCI 2
-
-/// Dimensione massima comando da leggere (i, j, k, e ordine possono avere massimo 3 cifre)
-#define DIM_COM 13+1
 
 typedef struct {
   long mtype;

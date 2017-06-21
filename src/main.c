@@ -11,9 +11,16 @@
   *
   */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/msg.h>
+#include <sys/wait.h>
 
 #include "utilities.h"
 #include "child.h"
@@ -41,6 +48,7 @@ int processiLiberi;
 int messaggiRicevuti;
 int processiAttivi;
 int indicePipe;
+int trovato;
 
 
 	if(argc != NUM_PARAMETRI) {
@@ -81,7 +89,7 @@ int indicePipe;
 		return 0;
 	}
 
-	pipeComandi = malloc(int * sizeof(numFigli));
+	pipeComandi = malloc(numFigli * sizeof(int));
 	if(pipeComandi == NULL) {
 		segnala("Errore: impossibile creare la matrice di pipe.\n\n");
 		close(fileMatA);
@@ -90,11 +98,11 @@ int indicePipe;
 		return 0;
 	}
 
-	matA = crea_matrice(ordine);
-	matB = crea_matrice(ordine);
-	matC = crea_matrice(ordine);
+	matA = creaMatrice(ordine);
+	matB = creaMatrice(ordine);
+	matC = creaMatrice(ordine);
 
-	matProcessi = crea_matrice(ordine);
+	matProcessi = creaMatrice(ordine);
 
 	leggiMatrice(fileMatA, matA);
 	leggiMatrice(fileMatB, matB);
@@ -193,6 +201,7 @@ int indicePipe;
 		close(fileMatB);
 		close(fileMatC);
 		return 0;
+	}
 
 	/// Creazione figli
 	for(i = 0; i < numFigli; i++) {
@@ -201,13 +210,13 @@ int indicePipe;
 			segnala("Errore: impossibile creare la pipe.\n\n");
 			free(pidFigli);
 			free(pipeComandi);
-			freeMatrice(matA);
-			freeMatrice(matB);
-			freeMatrice(matC);
+			freeMatrice(matA, ordine);
+			freeMatrice(matB, ordine);
+			freeMatrice(matC, ordine);
+			freeMatrice(matProcessi, ordine);
 			close(fileMatA);
 			close(fileMatB);
 			close(fileMatC);
-			free somma
 			return 0;
 		}
 
@@ -217,9 +226,10 @@ int indicePipe;
 			segnala("Errore: impossibile creare il processo figlio.\n\n");
 			free(pidFigli);
 			free(pipeComandi);
-			freeMatrice(matA);
-			freeMatrice(matB);
-			freeMatrice(matC);
+			freeMatrice(matA, ordine);
+			freeMatrice(matB, ordine);
+			freeMatrice(matC, ordine);
+			freeMatrice(matProcessi, ordine);
 			close(fileMatA);
 			close(fileMatB);
 			close(fileMatC);
@@ -230,9 +240,10 @@ int indicePipe;
 				segnala("Errore: impossibile chiudere la pipe di scrittura nel child.\n\n");
 				free(pidFigli);
 				free(pipeComandi);
-				freeMatrice(matA);
-				freeMatrice(matB);
-				freeMatrice(matC);
+				freeMatrice(matA, ordine);
+				freeMatrice(matB, ordine);
+				freeMatrice(matC, ordine);
+				freeMatrice(matProcessi, ordine);
 				close(fileMatA);
 				close(fileMatB);
 				close(fileMatC);
@@ -245,18 +256,20 @@ int indicePipe;
 				segnala("Errore: impossibile chiudere la pipe di lettura nel child.\n\n");
 				free(pidFigli);
 				free(pipeComandi);
-				freeMatrice(matA);
-				freeMatrice(matB);
-				freeMatrice(matC);
+				freeMatrice(matA, ordine);
+				freeMatrice(matB, ordine);
+				freeMatrice(matC, ordine);
+				freeMatrice(matProcessi, ordine);
 				close(fileMatA);
 				close(fileMatB);
 				close(fileMatC);
 				exit(1);
 			}
 
-			freeMatrice(matA);
-			freeMatrice(matB);
-			freeMatrice(matC);
+			freeMatrice(matA, ordine);
+			freeMatrice(matB, ordine);
+			freeMatrice(matC, ordine);
+			freeMatrice(matProcessi, ordine);
 			close(fileMatA);
 			close(fileMatB);
 			close(fileMatC);
@@ -274,9 +287,10 @@ int indicePipe;
 		segnala("Errore: impossibile allocare il buffer del comando.\n\n");
 		free(pidFigli);
 		free(pipeComandi);
-		freeMatrice(matA);
-		freeMatrice(matB);
-		freeMatrice(matC);
+		freeMatrice(matA, ordine);
+		freeMatrice(matB, ordine);
+		freeMatrice(matC, ordine);
+		freeMatrice(matProcessi, ordine);
 		close(fileMatA);
 		close(fileMatB);
 		close(fileMatC);
@@ -355,7 +369,7 @@ int indicePipe;
 			}
 
 			while(messaggiRicevuti < (ordine * ordine) + ordine) {
-				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long));
+				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
 
 				if(msgFiglio.comando == MOLTIPLICA) {
 					// Segno che la cella assegnata è stata completata
@@ -375,7 +389,7 @@ int indicePipe;
 			for(j = 0; j < ordine && !finito; j++) {
 				if(count <= numFigli) {
 					creaComando(buff, MOLTIPLICA, i, j, ordine);
-					write(pipeComandi[(i * ordine) + j][1]);
+					write(pipeComandi[(i * ordine) + j][1], buff, strlen(buff));
 					count++;
 				}
 				else {
@@ -452,7 +466,8 @@ int indicePipe;
 		write(fileMatC, buff, strlen(buff));
 	}
 
-	segnala("La somma delle righe della matrice C e': %d.\n\n", *sommaCond);
+	sprintf(buff, "La somma delle righe della matrice C e': %d.\n\n", *sommaCond);
+	segnala(buff);
 
 
 	// In attesa che ogni figlio termini
@@ -474,32 +489,33 @@ int indicePipe;
 
 
 	// Chiusura delle aree di memoria condivisa
-	if((shmctl(memA, ICP_RMID, NULL)) < 0)
+	if((shmctl(memA, IPC_RMID, NULL)) < 0)
 		segnala("Errore: impossibile cancellare l'area di memoria di A.\n\n");
 
-	if((shmctl(memB, ICP_RMID, NULL)) < 0)
+	if((shmctl(memB, IPC_RMID, NULL)) < 0)
 		segnala("Errore: impossibile cancellare l'area di memoria di B.\n\n");
 
-	if((shmctl(memC, ICP_RMID, NULL)) < 0)
+	if((shmctl(memC, IPC_RMID, NULL)) < 0)
 		segnala("Errore: impossibile cancellare l'area di memoria di C.\n\n");
 
-	if((shmctl(memSomma, ICP_RMID, NULL)) < 0)
+	if((shmctl(memSomma, IPC_RMID, NULL)) < 0)
 		segnala("Errore: impossibile cancellare l'area di memoria della somma.\n\n");
 
 
 	// Chiusura coda messaggi e semaforo
-	if((msgctl(codaMessaggi, ICP_RMID, NULL)) < 0)
+	if((msgctl(codaMessaggi, IPC_RMID, NULL)) < 0)
 		segnala("Errore: impossibile chiudere la coda di messaggi.\n\n");
 
-	if((semctl(semaforo, 0, ICP_RMID)) < 0)
+	if((semctl(semaforo, 0, IPC_RMID)) < 0)
 		segnala("Errore: impossibile chiudere il semaforo.\n\n");
 
 	free(pipeComandi);
 	free(pidFigli);
 	free(buff);
-	freeMatrice(matA);
-	freeMatrice(matB);
-	freeMatrice(matC);
+	freeMatrice(matA, ordine);
+	freeMatrice(matB, ordine);
+	freeMatrice(matC, ordine);
+	freeMatrice(matProcessi, ordine);
 	close(fileMatA);
 	close(fileMatB);
 	close(fileMatC);

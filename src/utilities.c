@@ -18,11 +18,11 @@ int n;				// Numero di byte letti dalla funzione read
 int i = 0, j = 0, k, x = 0;
 char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 
-	if((buff = malloc(DIM_BUFF * sizeof(char))) == -1) {
+	if((buff = malloc(DIM_BUFF * sizeof(char))) == NULL) {
 		segnala("Errore: impossibile allocare buffer durante la lettura di una matrice.\n\n");
 		exit(1);
 	}
-	if((temp = malloc(DIM_BUFF * sizeof(char))) == -1) {
+	if((temp = malloc(DIM_BUFF * sizeof(char))) == NULL) {
 		segnala("Errore: impossibile allocare stringa temporanea durante la lettura di una matrice.\n\n");
 	}
 

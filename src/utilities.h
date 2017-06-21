@@ -8,11 +8,11 @@
   * 
   */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
-#include "child.h"
 
 #ifndef UTILITIES_H
 #define UTILITIES_H
@@ -40,6 +40,18 @@
 
 /// Chiave della coda di messaggi
 #define MSG_KEY 200
+
+/// Dimensione massima comando da leggere (i, j, k, e ordine possono avere massimo 3 cifre)
+#define DIM_COM 13+1
+
+/// Moltiplicazione di una riga di A con una colonna di B
+#define MOLTIPLICA 0
+
+/// Somma di una riga di C
+#define SOMMA 1
+
+/// Chiusura del child
+#define ESCI 2
 
 /** @name Funzioni per la gestione delle matrici */
 /*@{ */
@@ -126,9 +138,7 @@ void segnala(char * bufferOutput);
   * 
   * @param ordine Ordine delle matrici
   *
-  * @return Puntatore alla stringa contenente il comando
-  *
   */
-char* creaComando(char * buff, int comando, int riga, int colonna, int ordine);
+void creaComando(char * buff, int comando, int riga, int colonna, int ordine);
 
 #endif
