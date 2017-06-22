@@ -73,7 +73,6 @@ int trovato;
 
 	if((ordine = atoi(argv[4])) <= 0) {
 		segnala("Errore: l'ordine delle matrici deve essere maggiore di zero.\n\n");
-		printf("Ordine = %d", ordine);
 		chiusuraFlag = 1;
 	}
 
@@ -165,6 +164,9 @@ int trovato;
 		close(fileMatC);
 		return 0;
 	}
+
+	caricaMatrice(matA, matCondA, ordine);
+	caricaMatrice(matB, matCondB, ordine);
 
 	*sommaCond = 0;
 
@@ -301,7 +303,7 @@ int trovato;
 		return 0;
 	}
 
-	segnala("Assegno i comandi ai vari processi figli.\n\n");
+	segnala("Assegno i comandi ai vari figli.\n\n");
 	if(ordine == 1) {
 
 		if(numFigli > 1) {
@@ -342,82 +344,39 @@ int trovato;
 	else if((ordine * ordine) <= numFigli) {
 
 		// Faccio partire le moltiplicazioni
-		for(i = 0; i < ordine; i++)
+		for(i = 0; i < ordine; i++) {
 			for(j = 0; j < ordine; j++) {
 				creaComando(buff, MOLTIPLICA, i, j, ordine);
 				write(pipeComandi[(i * ordine) + j][1], buff, strlen(buff));
 			}
+		}
 
 		segnala("Ho fatto partire le moltiplicazioni.\n\n");
 
-		// Faccio partire le somme
-		processiLiberi = numFigli - (ordine * ordine);
-		if(ordine <= processiLiberi) {
-			k = 0;
-			for(i = ordine * ordine; i < (ordine * ordine) + ordine - 1; i++, k++) {
-				creaComando(buff, SOMMA, k, -1, ordine);
-				write(pipeComandi[i][1], buff, strlen(buff));
-			}
+		// Ricevo i messaggi dai figli a cui ho assegnato un'operazione
+		for(i = 0; i < ordine * ordine; i++) {
 
-			processiAttivi = (ordine * ordine) + ordine;
+			// Mi metto in ascolto della risposta di un figlio
+			msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
 
-			// Ricevo i messaggi dai figli a cui ho assegnato un'operazione
-			for(i = 0; i < processiAttivi; i++) {
-				segnala("Sono prima della rcv.\n\n");
-				// Mi metto in ascolto della risposta di un figlio
-				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
-
-				segnala("Sono dopo la rcv.\n\n");
-
-				if(msgFiglio.comando == MOLTIPLICA) {
-					// Segno che la cella assegnata è stata completata
-					matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
-				}
-			}
+			// Segno che la cella assegnata è stata completata
+			matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
 		}
-		else {
 
-			k = 0;
-			for(i = ordine * ordine; i < ordine + processiLiberi; i++, k++) {
-				creaComando(buff, SOMMA, k, -1, ordine);
-				write(pipeComandi[i][1], buff, strlen(buff));
-			}
-
-			int righeDaSommare = ordine - processiLiberi;
-			trovato = 0;
-			i = messaggiRicevuti = 0;
-			while(i < righeDaSommare) {
-				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
-
-				// Cerco il pid del figlio che ha terminato
-				for(j = 0; j < numFigli && !trovato; j++) {
-					if(pidFigli[j] == msgFiglio.pid) {
-						indicePipe = j;
-						trovato = 1;
-					}
-				}
-
-				creaComando(buff, SOMMA, (ordine * ordine) + processiLiberi + i, -1, ordine);
-				write(pipeComandi[indicePipe][1], buff, strlen(buff));
-
-				messaggiRicevuti++;
-				i++;
-			}
-
-			while(messaggiRicevuti < (ordine * ordine) + ordine) {
-				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
-
-				if(msgFiglio.comando == MOLTIPLICA) {
-					// Segno che la cella assegnata è stata completata
-					matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
-				}
-				
-				messaggiRicevuti++;
-			}
+		// Faccio partire le somme, una volta che le moltiplicazioni sono finite
+		for(i = 0; i < ordine; i++) {
+			creaComando(buff, SOMMA, i, -1, ordine);
+			write(pipeComandi[i][1], buff, strlen(buff));
 		}
+
+		segnala("Ho fatto partire tutte le somme.\n\n");
+
+		for(i = 0; i < ordine; i++)
+			msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
 	}
 	else {
-		int operazioniTotali = (ordine * ordine) + ordine;			// Numero di operazioni totali da compiere
+		int operazioniTotali = (ordine * ordine);			// Numero di operazioni totali da compiere
 		int count = 0, operazioniEffettuate, prossimaRiga, prossimaColonna;
 		int finito = 0;												// Flag che indica se sono stati fatti partire tutti i processi possibili
 
@@ -435,8 +394,6 @@ int trovato;
 				}
 			}
 		}
-
-		operazioniEffettuate = numFigli;
 
 		// Procedo con le restanti moltiplicazioni
 		while(operazioniEffettuate <= (ordine * ordine)) {
@@ -472,7 +429,7 @@ int trovato;
 				}
 			}
 
-			creaComando(buff, SOMMA, i, -1, ordine);
+			creaComando(buff, SOMMA, msgFiglio.riga, -1, ordine);
 			write(pipeComandi[indicePipe][1], buff, strlen(buff));
 
 			i++;

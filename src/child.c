@@ -40,8 +40,6 @@ char * buffOutput;
 
 			else if(buff[0] == SOMMA + '0') {				// Devo sommare
 
-				printf("\n\nChild: devo sommare\n\n");
-
 				comando = SOMMA;
 				for(i = 2, j = 0; buff[i] != ' '; i++, j++)
 					temp[j] = buff[i];
@@ -122,16 +120,37 @@ int * tempA, * tempB, risultato;
 			exit(1);
 		}
 
-		// Ricavo la riga di A da moltiplicare
-		j = 0;
-		for(i = ordine * riga; i < ordine * (riga+1); i++, j++) {
-			tempA[j] = matCondA[i];
+		printf("\n\nMAT COND A ==== \n");
+		for(i = 0; i < ordine; i++) {
+			for(j = 0; j < ordine; j++) {
+				printf("%d ", matCondA[(i * ordine) + j]);
+			}
+			printf("\n");
 		}
 
+		printf("\n\nMAT COND B ==== \n");
+		for(i = 0; i < ordine; i++) {
+			for(j = 0; j < ordine; j++) {
+				printf("%d ", matCondB[(i * ordine) + j]);
+			}
+			printf("\n");
+		}
+
+		printf("\n\nTEMP A ===== ");
+		// Ricavo la riga di A da moltiplicare
+		j = 0;
+		for(i = ordine * riga; i < ordine * (riga+1); i++) {
+			tempA[j] = matCondA[i];
+			printf("%d ", tempA[j]);
+			j++;
+		}
+		printf("\n\nTEMP B ===== ");
 		// Ricavo la colonna di B da moltiplicare
 		j = 0;
-		for(i = 0; i < ordine; i++, j++) {
+		for(i = 0; i < ordine; i++) {
 			tempB[j] = matCondB[(i * ordine) + colonna];
+			printf("%d ", tempB[j]);
+			j++;
 		}
 
 		// Calcolo il risultato della moltiplicazione
