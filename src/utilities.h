@@ -1,7 +1,7 @@
 /**
   * @file utilities.h
   * 
-  * @brief Libreria di funzioni usate per gestire i dati
+  * @brief Libreria di funzioni e costanti usate per gestire i dati
   * del programma.
   * 
   * @author Filippo Nevi VR398146

@@ -1,21 +1,21 @@
 #include "child.h"
 
 void leggiComando(int pipe) {
-char buff[DIM_COM];				// Buffer su cui salvo il comando di cui fare parsing
+char buff[DIM_COM];						// Buffer su cui salvo il comando di cui fare parsing
 int comando, riga, colonna, ordine;		// Parametri del comando inviato dal padre
 int i, j;
-char temp[3+1];					// Stringa temporanea su cui salvo i numeri da trasformare in int
-int esci = 0;
+char temp[3+1];							// Stringa temporanea su cui salvo i numeri da trasformare in int
+int esci = 0, n;
 char * buffOutput;
 
 	if((buffOutput = malloc(DIM_BUFF * sizeof(char))) == NULL)
 		segnala("Errore: impossibile allocare buffOutput in child.");
 
 	while(!esci) {
-
-		if(read(pipe, &buff, DIM_COM) > 0) {
+		n = read(pipe, &buff, DIM_COM);
+		if(n > 0) {
 			// Parsing del comando
-			if(buff[0] == MOLTIPLICA) {				// Devo moltiplicare
+			if(buff[0] == MOLTIPLICA + '0') {				// Devo moltiplicare
 
 				comando = MOLTIPLICA;
 				for(i = 2, j = 0; buff[i] != ' '; i++, j++)
@@ -35,12 +35,12 @@ char * buffOutput;
 				temp[j] = '\0';
 				ordine = atoi(temp);
 
-				sprintf(buffOutput, "Child: ho ricevuto il comando di moltiplicare la riga %d di A e la colonna %d di B.\n\n", riga, colonna);
-				segnala(buffOutput);
 				eseguiComando(comando, riga, colonna, ordine);
 			}
 
-			else if(buff[0] == SOMMA) {				// Devo sommare
+			else if(buff[0] == SOMMA + '0') {				// Devo sommare
+
+				printf("\n\nChild: devo sommare\n\n");
 
 				comando = SOMMA;
 				for(i = 2, j = 0; buff[i] != ' '; i++, j++)
@@ -56,13 +56,10 @@ char * buffOutput;
 
 				colonna = -1;
 
-				sprintf(buffOutput, "Child: ho ricevuto il comando di sommare la riga %d di C.\n\n", riga);
-				segnala(buffOutput);
 				eseguiComando(comando, riga, colonna, ordine);
 			}
 
-			else if(buff[0] == ESCI){				// Devo uscire
-				segnala("Child: ho ricevuto il comando di terminare l'esecuzione.\n\n");
+			else if(buff[0] == ESCI + '0'){				// Devo uscire
 				esci = 1;
 			}
 

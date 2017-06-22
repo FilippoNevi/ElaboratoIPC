@@ -38,7 +38,7 @@ int i, j, k;
 int * matCondA, * matCondB, * matCondC, *sommaCond;	// Dati condivisi dai processi
 int semaforo;										// Semaforo che gestisce la memoria condivisa
 struct sembuf op;									// Operazione da applicare al semaforo
-int *pipeComandi;									// Matrice di pipe per comunicare ai figli i comandi da svolgere
+int **pipeComandi;									// Matrice di pipe per comunicare ai figli i comandi da svolgere
 int *pidFigli;										// Array di pid dei figli
 int codaMessaggi;
 int pid;
@@ -73,6 +73,7 @@ int trovato;
 
 	if((ordine = atoi(argv[4])) <= 0) {
 		segnala("Errore: l'ordine delle matrici deve essere maggiore di zero.\n\n");
+		printf("Ordine = %d", ordine);
 		chiusuraFlag = 1;
 	}
 
@@ -89,13 +90,16 @@ int trovato;
 		return 0;
 	}
 
-	pipeComandi = malloc(numFigli * sizeof(int));
+	pipeComandi = malloc(numFigli * sizeof(int *));
 	if(pipeComandi == NULL) {
 		segnala("Errore: impossibile creare la matrice di pipe.\n\n");
 		close(fileMatA);
 		close(fileMatB);
 		close(fileMatC);
 		return 0;
+	}
+	for(i = 0; i < numFigli; i++) {
+		pipeComandi[i] = malloc(sizeof(int[2]));
 	}
 
 	matA = creaMatrice(ordine);
@@ -299,15 +303,41 @@ int trovato;
 
 	segnala("Assegno i comandi ai vari processi figli.\n\n");
 	if(ordine == 1) {
-		// Creo il comando e lo invio al figlio
-		creaComando(buff, MOLTIPLICA, 0, 0, ordine);
-		write(pipeComandi[0][1], buff, strlen(buff));
 
-		// Mi metto in ascolto della risposta del figlio
-		msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+		if(numFigli > 1) {
+			// Creo il comando e lo invio al figlio
+			creaComando(buff, MOLTIPLICA, 0, 0, ordine);
+			write(pipeComandi[0][1], buff, strlen(buff));
 
-		// Segno che l'unica cella da elaborare è stata completata
-		matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
+			creaComando(buff, SOMMA, 0, -1, ordine);
+			write(pipeComandi[1][1], buff, strlen(buff));
+
+			for(i = 0; i < 2; i++) {
+				// Mi metto in ascolto della risposta dei figli
+				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
+				if(msgFiglio.comando == MOLTIPLICA) {
+					// Segno che l'unica cella da elaborare è stata completata
+					matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
+				}
+			}
+		}
+		else {
+			creaComando(buff, MOLTIPLICA, 0, 0, ordine);
+			write(pipeComandi[0][1], buff, strlen(buff));
+			
+			// Mi metto in ascolto della risposta del figlio
+			msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
+			matProcessi[msgFiglio.riga][msgFiglio.colonna] = 1;
+
+			creaComando(buff, SOMMA, 0, -1, ordine);
+			write(pipeComandi[0][1], buff, strlen(buff));
+
+			// Mi metto in ascolto della risposta del figlio
+			msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
+		}
 	}
 	else if((ordine * ordine) <= numFigli) {
 
@@ -318,7 +348,8 @@ int trovato;
 				write(pipeComandi[(i * ordine) + j][1], buff, strlen(buff));
 			}
 
-		
+		segnala("Ho fatto partire le moltiplicazioni.\n\n");
+
 		// Faccio partire le somme
 		processiLiberi = numFigli - (ordine * ordine);
 		if(ordine <= processiLiberi) {
@@ -329,10 +360,14 @@ int trovato;
 			}
 
 			processiAttivi = (ordine * ordine) + ordine;
+
 			// Ricevo i messaggi dai figli a cui ho assegnato un'operazione
 			for(i = 0; i < processiAttivi; i++) {
+				segnala("Sono prima della rcv.\n\n");
 				// Mi metto in ascolto della risposta di un figlio
 				msgrcv(codaMessaggi, &msgFiglio, sizeof(messaggio) - sizeof(long), 1, 0);
+
+				segnala("Sono dopo la rcv.\n\n");
 
 				if(msgFiglio.comando == MOLTIPLICA) {
 					// Segno che la cella assegnata è stata completata
@@ -341,6 +376,7 @@ int trovato;
 			}
 		}
 		else {
+
 			k = 0;
 			for(i = ordine * ordine; i < ordine + processiLiberi; i++, k++) {
 				creaComando(buff, SOMMA, k, -1, ordine);
@@ -462,7 +498,7 @@ int trovato;
 			sprintf(buff, "%d ", matC[i][j]);
 			write(fileMatC, buff, strlen(buff));
 		}
-		sprintf(buff, "\n\n");
+		sprintf(buff, "\n");
 		write(fileMatC, buff, strlen(buff));
 	}
 
@@ -509,7 +545,12 @@ int trovato;
 	if((semctl(semaforo, 0, IPC_RMID)) < 0)
 		segnala("Errore: impossibile chiudere il semaforo.\n\n");
 
-	free(pipeComandi);
+
+	// Free della pipe
+	for(i = 0; i < numFigli; i++) {
+		free(pipeComandi[i]);
+	}
+
 	free(pidFigli);
 	free(buff);
 	freeMatrice(matA, ordine);
