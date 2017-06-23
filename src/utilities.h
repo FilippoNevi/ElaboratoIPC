@@ -74,7 +74,7 @@ int ** creaMatrice(int ordine);
  * @param matrice Puntatore alla matrice su cui salvare i dati
  *
  */
-void leggiMatrice(int fileMatrice, int ** matrice);
+void leggiMatrice(int fileMatrice, int ** matrice, int ordine);
 
 /**
  * @brief Funzione che legge riga per riga un file

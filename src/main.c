@@ -107,8 +107,8 @@ int trovato;
 
 	matProcessi = creaMatrice(ordine);
 
-	leggiMatrice(fileMatA, matA);
-	leggiMatrice(fileMatB, matB);
+	leggiMatrice(fileMatA, matA, ordine);
+	leggiMatrice(fileMatB, matB, ordine);
 
 	/// Creazione delle quattro aree di memoria condivisa
 	memA = shmget(SHM_KEY_A, sizeof(int[ordine][ordine]), (0666 | IPC_CREAT));	// IPC_CREAT crea una nuova entry se key non esiste
@@ -509,7 +509,7 @@ int trovato;
 	}
 
 	free(pidFigli);
-	free(buff);
+	//free(buff);
 	freeMatrice(matA, ordine);
 	freeMatrice(matB, ordine);
 	freeMatrice(matC, ordine);

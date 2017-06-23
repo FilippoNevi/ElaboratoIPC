@@ -11,12 +11,12 @@ int ** creaMatrice(int ordine) {
 	return matrice;
 }
 
-void leggiMatrice(int fileMatrice, int ** matrice) {
+void leggiMatrice(int fileMatrice, int ** matrice, int ordine) {
 
-char * buff;		// Buffer su cui salvare il contenuto di ogni riga
-int n;				// Numero di byte letti dalla funzione read
+char * buff;					// Buffer su cui salvare il contenuto di ogni riga
+int n;							// Numero di byte letti dalla funzione leggiRiga
 int i = 0, j = 0, k, x = 0;
-char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
+char * temp;					// Array temporaneo su cui salvo ogni numero che leggo
 
 	if((buff = malloc(DIM_BUFF * sizeof(char))) == NULL) {
 		segnala("Errore: impossibile allocare buffer durante la lettura di una matrice.\n\n");
@@ -30,18 +30,32 @@ char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 
 		buff[n] = '\0';
 
+		printf("\n\nHO APPENA LETTO LA RIGA: %s", buff);
+
+		printf("\n\nSTAMPO BUFF: ");
+
+		for(k = 0; k < strlen(buff) && (buff[k] != '\0'); k++) {
+			printf("%d ", buff[k]);
+		}
+
+		printf("\n");
+
+
 		for(k = 0; k < strlen(buff) && (buff[k] != '\0'); k++) {
 
 			if((buff[k] != ' ') && (buff[k] != '\n')) {
 				temp[x] = buff[k];
 				x++;
+				printf("\n\nSONO IN IF\n\n");
 			}
 			else {
-				temp[x+1] = '\0';
+				temp[x] = '\0';
 				x = 0;
 				matrice[i][j] = atoi(temp);
 
-				if(buff[k] == '\n') {	// Se sono arrivato a fine riga passo alla successiva
+				printf("\n\nSTAMPA RIGA %d E COLONNA %d: %d\n\n", i, j, matrice[i][j]);
+
+				if(j == ordine - 1) {	// Se sono arrivato a fine riga passo alla successiva
 					i++;
 					j = 0;
 				}
@@ -57,7 +71,7 @@ char * temp;		// Array temporaneo su cui salvo ogni numero che leggo
 }
 
 int leggiRiga(int fileMatrice, char * buff) {
-char carattere;			// Carattere su cui salvo ogni byte che leggo dal file
+char carattere;											// Carattere su cui salvo ogni byte che leggo dal file
 int dim, dimTot = 0;
 int i = 0;
 	
@@ -65,9 +79,7 @@ int i = 0;
 		if((carattere == EOF) || (carattere == '\n')){
 			return dimTot;
 		}
-		else {
-			dimTot++;
-			
+		else {		
 			while((carattere != '\n') && (carattere != EOF) && (dim > 0)) {
 				buff[i] = carattere;
 				i++;
@@ -91,8 +103,9 @@ void caricaMatrice(int ** matrice, int * matriceCond, int ordine) {
 int i, j;
 
 	for(i = 0; i < ordine; i++)
-		for(j = 0; j < ordine; j++)
+		for(j = 0; j < ordine; j++) {
 			matriceCond[(i * ordine) + j] = matrice[i][j];
+		}
 
 }
 
