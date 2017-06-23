@@ -1,5 +1,5 @@
-ipcrm -S 150
-ipcrm -Q 200
-ipcrm -M 80
-ipcrm -M 81
-ipcrm -M 82
+ipcrm -S 0x00000096
+ipcrm -Q 0x000000c8
+ipcrm -M 0x00000050
+ipcrm -M 0x00000051
+ipcrm -M 0x00000052
